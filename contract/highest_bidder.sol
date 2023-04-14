@@ -29,7 +29,6 @@ contract Tiles {
   }
 
   mapping(uint32 => mapping(uint32 => Pixel)) public pixels;
-  uint8[4][width*height] public pixels_colors;
 
   constructor(address token) {
     owner = msg.sender;
@@ -57,15 +56,8 @@ contract Tiles {
     require(send_success, "Failed to send");
     //change pixel
     pixels[y][x] = Pixel(x, y, color, msg.sender, amount);
-    pixels_colors[y*height+x] = color;
     //emit event
     emit ChangePixel(msg.sender, [x, y], color, amount);
-  }
-
-  //read only functions (no gas)
-
-  function getPixelsColors() public view returns (uint8[4][width*height] memory) {
-    return pixels_colors;
   }
 
   //admin functions
@@ -77,7 +69,6 @@ contract Tiles {
     require(height <= y, "y too large, outside dimensions");
     //actually remove
     delete pixels[y][x];
-    pixels_colors[y*height+x] = [0, 0, 0, 0];
   }
 
   function pause() external ownerOnly returns (bool) {

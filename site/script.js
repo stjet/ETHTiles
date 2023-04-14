@@ -599,7 +599,14 @@ async function get_pixels() {
 async function draw_pixels() {
   //draw pixels to canvas?
   console.log(tiles_contract_read)
-  console.log(await tiles_contract.width())
-  let pixels = await tiles_contract.getPixelsColors();
+  let width = await tiles_contract.width();
+  let height = await tiles_contract.height();
+  let pixels = [];
+  for (let y=0; y < height; y++) {
+    for (let x=0; x < width; x++) {
+      console.log(y, x)
+      pixels.push(await tiles_contract.pixels(y, x))
+    }
+  }
   console.log(pixels)
 }
