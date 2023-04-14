@@ -8,8 +8,9 @@ interface IERC20 {
 
 contract Tiles {
   bool public paused = false;
+  uint32 public constant width = 100;
+  uint32 public constant height = 100;
   address private immutable owner;
-  uint32[2] public dimensions;
   IERC20 private immutable pay_token;
 
   event ChangePixel(
@@ -28,11 +29,11 @@ contract Tiles {
   }
 
   mapping(uint32 => mapping(uint32 => Pixel)) public pixels;
+  uint8[4][width*height] public pixels_colors;
 
-  constructor(address token, uint32 width, uint32 height) {
+  constructor(address token) {
     owner = msg.sender;
     pay_token = IERC20(token);
-    dimensions = [width, height];
   }
 
   modifier ownerOnly() {
@@ -46,8 +47,8 @@ contract Tiles {
     //don't allow if paused
     require(!paused, "Coloring is paused");
     //make sure is within dimensions
-    require(dimensions[0] <= x, "x too large, outside dimensions");
-    require(dimensions[1] <= y, "y too large, outside dimensions");
+    require(width <= x, "x too large, outside dimensions");
+    require(height <= y, "y too large, outside dimensions");
     //check if amount is more than current amount (this also disallows paying 0 for pixel)
     require(pixels[y][x].paid_amount < amount, "Amount not enough");
     //try to send
@@ -56,8 +57,15 @@ contract Tiles {
     require(send_success, "Failed to send");
     //change pixel
     pixels[y][x] = Pixel(x, y, color, msg.sender, amount);
+    pixels_colors[y*height+x] = color;
     //emit event
     emit ChangePixel(msg.sender, [x, y], color, amount);
+  }
+
+  //read only functions (no gas)
+
+  function getPixelsColors() public view returns (uint8[4][width*height] memory) {
+    return pixels_colors;
   }
 
   //admin functions
@@ -65,10 +73,11 @@ contract Tiles {
   function clearPixel(uint32 x, uint32 y) public ownerOnly {
     //allow clearing even if paused
     //make sure is within dimensions
-    require(dimensions[0] <= x, "x too large, outside dimensions");
-    require(dimensions[1] <= y, "y too large, outside dimensions");
+    require(width <= x, "x too large, outside dimensions");
+    require(height <= y, "y too large, outside dimensions");
     //actually remove
     delete pixels[y][x];
+    pixels_colors[y*height+x] = [0, 0, 0, 0];
   }
 
   function pause() external ownerOnly returns (bool) {
