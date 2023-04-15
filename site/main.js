@@ -527,86 +527,81 @@ const ERC20_ABI = [
 	}
 ];
 
-const RPC_URL = "https://songbird-api.flare.network/ext/C/rpc";
+const web3_read = new Web3();
+
+//https://songbird-api.flare.network/ext/C/rpc
+//https://sgb.ftso.com.au/ext/bc/C/rpc
+const RPC_URL = "https://sgb.ftso.com.au/ext/bc/C/rpc";
 const TOKEN_CONTRACT_ADDRESS = "0x376cf089c29d3c1d353028E181Ae3162ec3a5c1A";
 const TILES_CONTRACT_ADDRESS = "0x3409d40c959280Ea1c59b8433eF02688fB38C229";
 
-const rpc_provider = new ethers.providers.JsonRpcProvider(RPC_URL);
-let rpc_signer = rpc_provider.getSigner();
-
-const user_provider = new ethers.providers.Web3Provider(window.ethereum);
-let user_signer;
-
-let tiles_contract_read = new ethers.Contract(TILES_CONTRACT_ADDRESS, TILES_ABI, rpc_signer);
-
-let tiles_contract;
-let token_contract;
+web3_read.eth.setProvider(RPC_URL);
+let tiles_contract = new web3_read.eth.Contract(TILES_ABI, TILES_CONTRACT_ADDRESS);
 
 let connected = false;
+let web3_user;
 
-user_provider.send("eth_accounts", []).then((available_accounts) => {
-  console.log(available_accounts)
-  if (available_accounts.length !== 0) {
-    user_signer = user_provider.getSigner();
-    tiles_contract = new ethers.Contract(TILES_CONTRACT_ADDRESS, TILES_ABI, user_signer);
-    token_contract = new ethers.Contract(TOKEN_CONTRACT_ADDRESS, ERC20_ABI, user_signer);
-    document.getElementById("connect-btn").innerText = "Connected";
-    document.getElementById("connect-btn").disabled = true;
-    connected = true;
-  }
-});
+//check if already connected
+if (window.ethereum) {
+	window.ethereum.request({method: 'eth_accounts'}).then((accounts) => {
+		console.log(accounts)
+		if (accounts.length > 0) {
+			web3_user = new Web3(window.ethereum);
+			document.getElementById("connect-btn").innerText = "Connected";
+			document.getElementById("connect-btn").disabled = true;
+			connected = true;
+		}
+	});
+}
 
 async function connect() {
-  //will error and stop function if user rejects request
-  await user_provider.send("eth_requestAccounts", []);
-  user_signer = user_provider.getSigner();
-  tiles_contract = new ethers.Contract(TILES_CONTRACT_ADDRESS, TILES_ABI, user_signer);
-  token_contract = new ethers.Contract(TOKEN_CONTRACT_ADDRESS, ERC20_ABI, user_signer);
-  document.getElementById("connect-btn").innerText = "Connected";
-  document.getElementById("connect-btn").disabled = true;
-  connected = true;
+	if (window.ethereum) {
+		//error thrown if user rejects request, and connect stopped
+		await window.ethereum.request({method: 'eth_requestAccounts'});
+		web3_user = new Web3(window.ethereum);
+		document.getElementById("connect-btn").innerText = "Connected";
+			document.getElementById("connect-btn").disabled = true;
+		connected = true;
+	}
 }
 
 async function approve() {
-  if (!connected) return;
-  //approve to contract
-  //
+	//token contract
 }
 
 async function set_pixel() {
-  if (!connected) return;
-  //set pixel
-  //
+	//
+}
+
+async function clear_pixel() {
+	//
 }
 
 async function get_pixels() {
-  //get dimensions
-  let width = await tiles_contract.width()
-  let height = await tiles_contract.height();
-  //for loop with dimensions, get values of pixels mapping
-  let pixels = [];
-  for (let y=0; y < height; y++) {
-    let row = [];
-    for (let x=0; x < width; x++) {
-      let pixel = await tiles_contract.pixels()[y][x];
-      row.push(pixel);
-    }
-    pixels.push(row);
-  }
-  return pixels
+	let width = await tiles_contract.methods.width().call();
+	let height = await tiles_contract.methods.height().call();
+	console.log(width, height)
+	return await new Promise((resolve, reject) => {
+		let batch = new web3_read.eth.BatchRequest();
+		let pixels = [];
+		for (let y=0; y < height; y++) {
+			for (let x=0; x < width; x++) {
+				batch.add(tiles_contract.methods.pixels(y, x).call.request((error, pixel) => {
+					if (error) console.log(error);
+					pixels.push(pixel);
+					if (pixels.length === height*width) {
+					  resolve(pixels);
+					}
+				}));
+			}
+		}
+		batch.execute();
+	});
 }
 
 async function draw_pixels() {
-  //draw pixels to canvas?
-  console.log(tiles_contract_read)
-  let width = await tiles_contract.width();
-  let height = await tiles_contract.height();
-  let pixels = [];
-  for (let y=0; y < height; y++) {
-    for (let x=0; x < width; x++) {
-      console.log(y, x)
-      pixels.push(await tiles_contract.pixels(y, x))
-    }
-  }
-  console.log(pixels)
+	let pixels = await get_pixels();
+	console.log(pixels[0], pixels.length);
+	//draw it
+	//
 }
