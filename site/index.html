@@ -5,10 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ETHTiles</title>
     <link rel="stylesheet" href="style.css">
+    <script src="blackbeard.js"></script>
     <script src="https://unpkg.com/web3@1.9.0/dist/web3.min.js"></script>
   </head>
   <body>
-    <button id="connect-btn" onclick="connect()">Connect</button>
+    <div>
+      <button id="connect-btn" onclick="connect()">Connect</button>
+    </div>
+    <div id="loading">
+      <h2>Loading</h2>
+    </div>
+    <div id="pixels">
+      <canvas id="pixels-canvas"></canvas>
+      <canvas id="pixels-canvas2"></canvas>
+    </div>
     <script src="main.js"></script>
   </body>
 </html>

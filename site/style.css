@@ -1,0 +1,8 @@
+#pixels {
+  height: 90vh;
+}
+
+#pixels-canvas2 {
+  top: calc(-90vh - 5px);
+  position: relative;
+}

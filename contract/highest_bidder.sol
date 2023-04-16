@@ -16,14 +16,12 @@ contract Tiles {
   event ChangePixel(
     address indexed _painter,
     uint32[2] indexed _coords,
-    uint8[4] _color,
+    uint32 _color,
     uint256 _paid_amount
   );
 
   struct Pixel {
-    uint32 x;
-    uint32 y;
-    uint8[4] color;
+    uint32 color;
     address painter;
     uint256 paid_amount;
   }
@@ -42,7 +40,7 @@ contract Tiles {
 
   //setting pixel
 	
-  function setPixel(uint256 amount, uint32 x, uint32 y, uint8[4] calldata color) public {
+  function setPixel(uint256 amount, uint32 x, uint32 y, uint32 color) public {
     //don't allow if paused
     require(!paused, "Coloring is paused");
     //make sure is within dimensions
@@ -55,7 +53,7 @@ contract Tiles {
     bool send_success = pay_token.transferFrom(msg.sender, address(this), amount);
     require(send_success, "Failed to send");
     //change pixel
-    pixels[y][x] = Pixel(x, y, color, msg.sender, amount);
+    pixels[y][x] = Pixel(color, msg.sender, amount);
     //emit event
     emit ChangePixel(msg.sender, [x, y], color, amount);
   }
