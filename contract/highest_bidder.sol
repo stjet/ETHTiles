@@ -8,8 +8,8 @@ interface IERC20 {
 
 contract Tiles {
   bool public paused = false;
-  uint32 public constant width = 100;
-  uint32 public constant height = 100;
+  uint32 public immutable width;
+  uint32 public immutable height;
   address private immutable owner;
   IERC20 private immutable pay_token;
 
@@ -28,8 +28,10 @@ contract Tiles {
 
   mapping(uint32 => mapping(uint32 => Pixel)) public pixels;
 
-  constructor(address token) {
+  constructor(address token, uint32 max_width, uint32 max_height) {
     owner = msg.sender;
+    width = max_width;
+    height = max_height;
     pay_token = IERC20(token);
   }
 
@@ -44,8 +46,8 @@ contract Tiles {
     //don't allow if paused
     require(!paused, "Coloring is paused");
     //make sure is within dimensions
-    require(width <= x, "x too large, outside dimensions");
-    require(height <= y, "y too large, outside dimensions");
+    require(width > x, "x too large, outside dimensions");
+    require(height > y, "y too large, outside dimensions");
     //check if amount is more than current amount (this also disallows paying 0 for pixel)
     require(pixels[y][x].paid_amount < amount, "Amount not enough");
     //try to send
@@ -63,8 +65,8 @@ contract Tiles {
   function clearPixel(uint32 x, uint32 y) public ownerOnly {
     //allow clearing even if paused
     //make sure is within dimensions
-    require(width <= x, "x too large, outside dimensions");
-    require(height <= y, "y too large, outside dimensions");
+    require(width > x, "x too large, outside dimensions");
+    require(height > y, "y too large, outside dimensions");
     //actually remove
     delete pixels[y][x];
   }

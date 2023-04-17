@@ -1,5 +1,26 @@
 const TILES_ABI = [
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint32",
+        "name": "max_width",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "max_height",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -16,9 +37,9 @@ const TILES_ABI = [
       },
       {
         "indexed": false,
-        "internalType": "uint8[4]",
+        "internalType": "uint32",
         "name": "_color",
-        "type": "uint8[4]"
+        "type": "uint32"
       },
       {
         "indexed": false,
@@ -50,103 +71,6 @@ const TILES_ABI = [
   },
   {
     "inputs": [],
-    "name": "pause",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint32",
-        "name": "x",
-        "type": "uint32"
-      },
-      {
-        "internalType": "uint32",
-        "name": "y",
-        "type": "uint32"
-      },
-      {
-        "internalType": "uint8[4]",
-        "name": "color",
-        "type": "uint8[4]"
-      }
-    ],
-    "name": "setPixel",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "unpause",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "withdraw",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "inputs": [],
-    "name": "getPixelsColors",
-    "outputs": [
-      {
-        "internalType": "uint8[4][10000]",
-        "name": "",
-        "type": "uint8[4][10000]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "height",
     "outputs": [
       {
@@ -156,6 +80,19 @@ const TILES_ABI = [
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pause",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -188,12 +125,7 @@ const TILES_ABI = [
     "outputs": [
       {
         "internalType": "uint32",
-        "name": "x",
-        "type": "uint32"
-      },
-      {
-        "internalType": "uint32",
-        "name": "y",
+        "name": "color",
         "type": "uint32"
       },
       {
@@ -214,24 +146,41 @@ const TILES_ABI = [
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "amount",
         "type": "uint256"
       },
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
+        "internalType": "uint32",
+        "name": "x",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "y",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "color",
+        "type": "uint32"
       }
     ],
-    "name": "pixels_colors",
+    "name": "setPixel",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "unpause",
     "outputs": [
       {
-        "internalType": "uint8",
+        "internalType": "bool",
         "name": "",
-        "type": "uint8"
+        "type": "bool"
       }
     ],
-    "stateMutability": "view",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -245,6 +194,25 @@ const TILES_ABI = [
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "withdraw",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ];
@@ -533,22 +501,42 @@ const web3_read = new Web3();
 //https://sgb.ftso.com.au/ext/bc/C/rpc
 const RPC_URL = "https://sgb.ftso.com.au/ext/bc/C/rpc";
 const TOKEN_CONTRACT_ADDRESS = "0x376cf089c29d3c1d353028E181Ae3162ec3a5c1A";
-const TILES_CONTRACT_ADDRESS = "0x3409d40c959280Ea1c59b8433eF02688fB38C229";
+const TILES_CONTRACT_ADDRESS = "0x98086B8b4baf43A5Ec5fC00F37306C2e58547A46";
+
+const TOKEN_DECIMALS = 18;
 
 web3_read.eth.setProvider(RPC_URL);
-let tiles_contract = new web3_read.eth.Contract(TILES_ABI, TILES_CONTRACT_ADDRESS);
+let tiles_contract_read = new web3_read.eth.Contract(TILES_ABI, TILES_CONTRACT_ADDRESS);
+
+let tiles_contract;
+let token_contract;
 
 let connected = false;
 let web3_user;
+
+function connect_actions(account) {
+  web3_user = new Web3(window.ethereum);
+  tiles_contract = new web3_user.eth.Contract(TILES_ABI, TILES_CONTRACT_ADDRESS, {
+    from: account
+  });
+  token_contract = new web3_user.eth.Contract(ERC20_ABI, TOKEN_CONTRACT_ADDRESS, {
+    from: account
+  });
+  console.log(token_contract.defaultAccount)
+  document.getElementById("connect-btn").innerText = "Connected";
+  document.getElementById("connect-btn").disabled = true;
+  document.getElementById("buy-btn").disabled = false;
+  document.getElementById("buy-btn").innerText = "Buy Pixel";
+  document.getElementById("approve-btn").disabled = false;
+  document.getElementById("approve-btn").innerText = "Approve Spending";
+  connected = true;
+}
 
 //check if already connected
 if (window.ethereum) {
   window.ethereum.request({method: 'eth_accounts'}).then((accounts) => {
     if (accounts.length > 0) {
-      web3_user = new Web3(window.ethereum);
-      document.getElementById("connect-btn").innerText = "Connected";
-      document.getElementById("connect-btn").disabled = true;
-      connected = true;
+      connect_actions(accounts[0]);
     }
   });
 }
@@ -556,19 +544,39 @@ if (window.ethereum) {
 async function connect() {
   if (window.ethereum) {
     //error thrown if user rejects request, and connect stopped
-    await window.ethereum.request({method: 'eth_requestAccounts'});
-    web3_user = new Web3(window.ethereum);
-    document.getElementById("connect-btn").innerText = "Connected";
-    document.getElementById("connect-btn").disabled = true;
-    connected = true;
+    let accounts = await window.ethereum.request({method: 'eth_requestAccounts'});
+    connect_actions(accounts[0]);
   }
 }
 
-async function approve() {
-  //token contract
+function color_to_u32(color) {
+  return (new Uint32Array((new Uint8Array(color)).buffer))[0];
 }
 
-async function set_pixel() {
+function u32_to_color(u32) {
+  return Array.from(new Uint8Array((new Uint32Array([u32])).buffer));
+}
+
+async function approve(amount) {
+  if (!connected) return;
+  let buy_price = Number(document.getElementById("buy-price").value);
+  if (isNaN(buy_price)) return;
+  buy_price = BigInt(buy_price)*(BigInt(10)**BigInt(TOKEN_DECIMALS));
+  await token_contract.methods.approve(TILES_CONTRACT_ADDRESS, buy_price).send();
+}
+
+async function buy(x, y) {
+  if (!connected) return;
+  let buy_price = Number(document.getElementById("buy-price").value);
+  if (isNaN(buy_price)) return;
+  buy_price = BigInt(buy_price)*(BigInt(10)**BigInt(TOKEN_DECIMALS));
+  let new_color = document.getElementById("new-color").value;
+  new_color = new_color.replace("(", "").replace(")", "").split(",").map((item) => parseInt(item));4
+  if (new_color.length !== 4) return;
+  for (let c=0; c < new_color.length; c++) {
+    if (isNaN(new_color[c]) || new_color[c] > 255) return;
+  }
+  await tiles_contract.methods.setPixel(buy_price, x, y, color_to_u32(new_color)).send();
   //
 }
 
@@ -583,7 +591,7 @@ async function get_pixels(width, height) {
     let pixels = [];
     for (let y=0; y < height; y++) {
       for (let x=0; x < width; x++) {
-        batch.add(tiles_contract.methods.pixels(y, x).call.request((error, pixel) => {
+        batch.add(tiles_contract_read.methods.pixels(y, x).call.request((error, pixel) => {
           if (error) console.log(error);
           pixels.push(pixel);
           if (pixels.length === height*width) {
@@ -594,14 +602,6 @@ async function get_pixels(width, height) {
     }
     batch.execute();
   });
-}
-
-function color_to_u32(color) {
-  return (new Uint32Array((new Uint8Array(color)).buffer))[0];
-}
-
-function u32_to_color(u32) {
-  return Array.from(new Uint8Array((new Uint32Array([u32])).buffer));
 }
 
 class PixelsGrid {
@@ -623,7 +623,7 @@ class PixelsGrid {
     //draw pixels at scale
     for (let i=0; i < this.pixels.length; i++) {
       let pixel = this.pixels[i];
-      console.log(pixel)
+      //console.log(pixel)
       let color = u32_to_color(pixel.color);
       let path = new Path2D();
       let x = i%this.width;
@@ -651,6 +651,12 @@ class PixelsGrid {
     path.rect(this.selected[0]*this.pixelSize, this.selected[1]*this.pixelSize, this.pixelSize, this.pixelSize);
     this.canvas2.context.fillStyle = "rgba(255, 255, 0, 0.5)";
     this.canvas2.context.fill(path);
+    document.dispatchEvent(new CustomEvent("pixelclick", {
+      detail: {
+        pixel: this.pixels[y*this.height+x],
+        coords: this.selected
+      }
+    }));
   }
   mousemove(e) {
     //e.offsetX, e.offsetY
@@ -661,11 +667,12 @@ let canvas;
 let canvas2;
 
 async function draw_pixels() {
-  let width = await tiles_contract.methods.width().call();
-  let height = await tiles_contract.methods.height().call();
+  let width = await tiles_contract_read.methods.width().call();
+  let height = await tiles_contract_read.methods.height().call();
   let pixels = await get_pixels(width, height);
   console.log(pixels[0], pixels.length);
-  //draw it
+  document.getElementById("loading-container").style.display = "none";
+  document.getElementById("main-grid").style.display = "grid";
   canvas = new Canvas("pixels-canvas");
   canvas2 = new Canvas("pixels-canvas2", false);
   new PixelsGrid(canvas, canvas2, pixels, width, height);
@@ -676,6 +683,21 @@ async function draw_pixels() {
   //
 }
 
-draw_pixels().then((_resp) => {
-  document.getElementById("loading").style.display = "none";
+draw_pixels();
+
+document.addEventListener("pixelclick", (event) => {
+  let pixel = event.detail.pixel;
+  let coords = event.detail.coords;
+  document.getElementById("none-selected").style.display = "none";
+  document.getElementById("pixel-info").style.display = "block";
+  document.getElementById("painter").innerText = pixel.painter;
+  //format the coords
+  document.getElementById("coords").innerText = "("+coords.join(", ")+")";
+  //format the paid amount
+  document.getElementById("bought-price").innerText = String(pixel.paid_amount*(10**-TOKEN_DECIMALS));
+  //format the color
+  document.getElementById("current-color").innerText = "("+u32_to_color(pixel.color).join(", ")+")";
+  document.getElementById("buy-btn").onclick = function() {
+    buy(coords[0], coords[1]);
+  };
 });

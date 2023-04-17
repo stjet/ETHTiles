@@ -12,12 +12,34 @@
     <div>
       <button id="connect-btn" onclick="connect()">Connect</button>
     </div>
-    <div id="loading">
-      <h2>Loading</h2>
+    <div id="loading-container">
+      <h2 id="loading">Loading</h2>
     </div>
-    <div id="pixels">
-      <canvas id="pixels-canvas"></canvas>
-      <canvas id="pixels-canvas2"></canvas>
+    <div id="main-grid" style="display: none;">
+      <div id="pixels">
+        <canvas id="pixels-canvas"></canvas>
+        <canvas id="pixels-canvas2"></canvas>
+      </div>
+      <div id="pixel-container">
+        <div id="none-selected">
+          <p>No pixel selected</p>
+        </div>
+        <div id="pixel-info">
+          <p>Coords: <span id="coords"></span></p>
+          <p>Current Color: <span id="current-color"></span></p>
+          <p>Painter: <span id="painter"></span></p>
+          <p>Bought Price: <span id="bought-price"></span></p>
+          <br>
+          <label for="buy-price">Buy Price (tokens): </label>
+          <input id="buy-price" type="text" placeholder="10">
+          <br>
+          <label for="new-color">New Color: </label>
+          <input id="new-color" type="text" placeholder="(255, 255, 255, 255)">
+          <br>
+          <button id="approve-btn" onclick="approve()" disabled>Approve Spending (Unconnected)</button>
+          <button id="buy-btn" disabled>Buy Pixel (Unconnected)</button>
+        </div>
+      </div>
     </div>
     <script src="main.js"></script>
   </body>

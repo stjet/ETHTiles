@@ -1,8 +1,48 @@
+@keyframes loading {
+  0% {
+    content: "";
+  }
+  33% {
+    content: ".";
+  }
+  66% {
+    content: "..";
+  }
+  100% {
+    content: "...";
+  }
+}
+
+#loading:after {
+  animation-name: loading;
+  animation-duration: 1.5s;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  content: "";
+}
+
 #pixels {
   height: 90vh;
+  width: 100%;
 }
 
 #pixels-canvas2 {
   top: calc(-90vh - 5px);
   position: relative;
+}
+
+#main-grid {
+  display: grid;
+  grid-gap: 1vw;
+  grid-template-columns: 69vw 28vw;
+}
+
+#pixel-info {
+  display: none;
+}
+
+@media screen and (max-width: 1000px) {
+  #main-grid {
+    grid-template-columns: auto;
+  }
 }
