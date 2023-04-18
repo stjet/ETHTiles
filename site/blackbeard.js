@@ -53,7 +53,6 @@ class Canvas {
       this.events[event] = [].concat(this.events[event], objects);
     } else if (!this.events[event]) {
       this.events[event] = objects;
-      console.log(this.events)
       //to make sure multiple event listeners arent added, only add the listener the first time addEvent() is called for event, after a reset/start. simplified; we only need one event listener per event, prevent there being multiple
       //add components to the event separately
       let self = this;

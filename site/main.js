@@ -502,14 +502,18 @@ const web3_read = new Web3();
 const RPC_URL = "https://sgb.ftso.com.au/ext/bc/C/rpc";
 const TOKEN_CONTRACT_ADDRESS = "0x376cf089c29d3c1d353028E181Ae3162ec3a5c1A";
 const TILES_CONTRACT_ADDRESS = "0x98086B8b4baf43A5Ec5fC00F37306C2e58547A46";
-
+const OWNER = "0x100e6F9164ADf9C924EDc31bc89Ab8bc1E5db2dd";
 const TOKEN_DECIMALS = 18;
+const TOKEN_NAME = "TESTT";
 
 web3_read.eth.setProvider(RPC_URL);
 let tiles_contract_read = new web3_read.eth.Contract(TILES_ABI, TILES_CONTRACT_ADDRESS);
 
 let tiles_contract;
 let token_contract;
+
+let GRID_WIDTH;
+let GRID_HEIGHT;
 
 let connected = false;
 let web3_user;
@@ -519,6 +523,9 @@ function connect_actions(account) {
   tiles_contract = new web3_user.eth.Contract(TILES_ABI, TILES_CONTRACT_ADDRESS, {
     from: account
   });
+  if (OWNER.toLowerCase() === account.toLowerCase()) {
+    document.getElementById("admin-btn").classList.remove("hide");
+  }
   token_contract = new web3_user.eth.Contract(ERC20_ABI, TOKEN_CONTRACT_ADDRESS, {
     from: account
   });
@@ -556,19 +563,30 @@ function u32_to_color(u32) {
   return Array.from(new Uint8Array((new Uint32Array([u32])).buffer));
 }
 
+function get_buy_price() {
+  let buy_price = Number(document.getElementById("buy-price").value);
+  if (isNaN(buy_price)) return false;
+  if (Math.floor(buy_price) !== buy_price) {
+    //handle decimals
+    let decimals = String(buy_price).split(".")[1].length;
+    buy_price = BigInt(buy_price*(10**decimals))*(BigInt(10)**BigInt(TOKEN_DECIMALS-decimals));
+  } else {
+    buy_price = BigInt(buy_price)*(BigInt(10)**BigInt(TOKEN_DECIMALS));
+  }
+  return buy_price;
+}
+
 async function approve(amount) {
   if (!connected) return;
-  let buy_price = Number(document.getElementById("buy-price").value);
-  if (isNaN(buy_price)) return;
-  buy_price = BigInt(buy_price)*(BigInt(10)**BigInt(TOKEN_DECIMALS));
+  let buy_price = get_buy_price();
+  if (!buy_price) return;
   await token_contract.methods.approve(TILES_CONTRACT_ADDRESS, buy_price).send();
 }
 
 async function buy(x, y) {
   if (!connected) return;
-  let buy_price = Number(document.getElementById("buy-price").value);
-  if (isNaN(buy_price)) return;
-  buy_price = BigInt(buy_price)*(BigInt(10)**BigInt(TOKEN_DECIMALS));
+  let buy_price = get_buy_price();
+  if (!buy_price) return;
   let new_color = document.getElementById("new-color").value;
   new_color = new_color.replace("(", "").replace(")", "").split(",").map((item) => parseInt(item));
   if (new_color.length === 3) {
@@ -580,24 +598,23 @@ async function buy(x, y) {
     if (isNaN(new_color[c]) || new_color[c] > 255) return;
   }
   await tiles_contract.methods.setPixel(buy_price, x, y, color_to_u32(new_color)).send();
-  //
 }
 
 async function clear_pixel() {
   //
 }
 
-async function get_pixels(width, height) {
-  console.log(width, height)
+async function get_pixels() {
+  console.log(GRID_WIDTH, GRID_HEIGHT)
   return await new Promise((resolve, reject) => {
     let batch = new web3_read.eth.BatchRequest();
     let pixels = [];
-    for (let y=0; y < height; y++) {
-      for (let x=0; x < width; x++) {
+    for (let y=0; y < GRID_HEIGHT; y++) {
+      for (let x=0; x < GRID_WIDTH; x++) {
         batch.add(tiles_contract_read.methods.pixels(y, x).call.request((error, pixel) => {
           if (error) console.log(error);
           pixels.push(pixel);
-          if (pixels.length === height*width) {
+          if (pixels.length === GRID_HEIGHT*GRID_WIDTH) {
             resolve(pixels);
           }
         }));
@@ -616,7 +633,7 @@ class PixelsGrid {
     this.scaleFactor = 1;
     this.translateFactor = [0, 0];
     this.pixelSize = 20;
-    this.border = true;
+    this.borders = true;
     this.selected = false;
     this.canvas.addEvent("click", [this], false);
     this.canvas.components.push(this);
@@ -637,14 +654,13 @@ class PixelsGrid {
       this.canvas.context.fillStyle = "rgba(255, 255, 0, 0.8)";
       this.canvas.context.fill(path);
     }
-    if (this.border) {
+    if (this.borders) {
       this.canvas.context.strokeStyle = "black";
       this.canvas.context.lineWidth = 0.4;
       this.canvas.context.stroke(path);
     }
   }
   update() {
-    console.log(this.translateFactor)
     //draw pixels at scale
     for (let i=0; i < this.pixels.length; i++) {
       let pixel = this.pixels[i];
@@ -659,7 +675,6 @@ class PixelsGrid {
     }
   }
   click(e) {
-    console.log(this.translateFactor)
     //see which box the click is in
     let x = Math.floor((e.offsetX+this.translateFactor[0])/this.pixelSize);
     let y = Math.floor((e.offsetY+this.translateFactor[1])/this.pixelSize);
@@ -687,20 +702,24 @@ class PixelsGrid {
 let canvas;
 let pixel_grid;
 
+async function update_pixels() {
+  console.log("Updating pixels (calling tiles smart contract)");
+  pixel_grid.pixels = await get_pixels();
+  console.log(pixel_grid.pixels[0], pixel_grid.pixels.length);
+  canvas.update();
+}
+
 async function draw_pixel_grid() {
-  let width = await tiles_contract_read.methods.width().call();
-  let height = await tiles_contract_read.methods.height().call();
-  let pixels = await get_pixels(width, height);
-  console.log(pixels[0], pixels.length);
+  GRID_WIDTH = await tiles_contract_read.methods.width().call();
+  GRID_HEIGHT = await tiles_contract_read.methods.height().call();
+  let pixels = await get_pixels();
   document.getElementById("loading-container").style.display = "none";
   document.getElementById("main-grid").style.display = "grid";
   canvas = new Canvas("pixels-canvas");
-  pixel_grid = new PixelsGrid(canvas, pixels, width, height);
+  pixel_grid = new PixelsGrid(canvas, pixels, GRID_WIDTH, GRID_HEIGHT);
   canvas.update();
-  /*setInterval(function() {
-    canvas.update();
-  }, 1000/6);*/
-  //
+  //update pixels every minute or so
+  setInterval(update_pixels, 60*1000);
 }
 
 draw_pixel_grid();
@@ -708,13 +727,13 @@ draw_pixel_grid();
 document.addEventListener("pixelclick", (e) => {
   let pixel = e.detail.pixel;
   let coords = e.detail.coords;
-  document.getElementById("none-selected").style.display = "none";
-  document.getElementById("pixel-info").style.display = "block";
+  document.getElementById("none-selected").classList.add("hide");
+  document.getElementById("pixel-info").classList.remove("hide");
   document.getElementById("painter").innerText = pixel.painter;
   //format the coords
   document.getElementById("coords").innerText = "("+coords.join(", ")+")";
   //format the paid amount
-  document.getElementById("bought-price").innerText = String(pixel.paid_amount*(10**-TOKEN_DECIMALS));
+  document.getElementById("bought-price").innerText = String(pixel.paid_amount*(10**-TOKEN_DECIMALS))+" "+TOKEN_NAME;
   //format the color
   document.getElementById("current-color").innerText = "("+u32_to_color(pixel.color).join(", ")+")";
   document.getElementById("buy-btn").onclick = function() {
@@ -767,4 +786,14 @@ document.addEventListener("keydown", (e) => {
     }
     canvas.update();
   }
+});
+
+document.getElementById("toggle-borders").addEventListener("change", function(e) {
+  if (!pixel_grid) return;
+  if (document.getElementById("toggle-borders").checked) {
+    pixel_grid.borders = true;
+  } else {
+    pixel_grid.borders = false;
+  }
+  canvas.update();
 });

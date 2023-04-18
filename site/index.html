@@ -10,6 +10,11 @@
   </head>
   <body>
     <div>
+      <nav>
+        <button>Main</button>
+        <button>About</button>
+        <button id="admin-btn" class="hide">Admin</button>
+      </nav>
       <button id="connect-btn" onclick="connect()">Connect</button>
     </div>
     <div id="loading-container">
@@ -23,10 +28,16 @@
         <canvas id="pixels-canvas"></canvas>
       </div>
       <div id="pixel-container">
+        <div id="actions">
+          <label for="toggle-borders">Borders: </label>
+          <input id="toggle-borders" type="checkbox" checked></input>
+          <br>
+          <button onclick="update_pixels()">Update</button>
+        </div>
         <div id="none-selected">
           <p>No pixel selected</p>
         </div>
-        <div id="pixel-info">
+        <div id="pixel-info" class="hide">
           <p>Coords: <span id="coords"></span></p>
           <p>Current Color: <span id="current-color"></span></p>
           <p>Painter: <span id="painter"></span></p>

@@ -32,7 +32,7 @@
   grid-template-columns: 69vw 28vw;
 }
 
-#pixel-info {
+.hide {
   display: none;
 }
 
