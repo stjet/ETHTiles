@@ -522,7 +522,6 @@ function connect_actions(account) {
   token_contract = new web3_user.eth.Contract(ERC20_ABI, TOKEN_CONTRACT_ADDRESS, {
     from: account
   });
-  console.log(token_contract.defaultAccount)
   document.getElementById("connect-btn").innerText = "Connected";
   document.getElementById("connect-btn").disabled = true;
   document.getElementById("buy-btn").disabled = false;
@@ -571,7 +570,11 @@ async function buy(x, y) {
   if (isNaN(buy_price)) return;
   buy_price = BigInt(buy_price)*(BigInt(10)**BigInt(TOKEN_DECIMALS));
   let new_color = document.getElementById("new-color").value;
-  new_color = new_color.replace("(", "").replace(")", "").split(",").map((item) => parseInt(item));4
+  new_color = new_color.replace("(", "").replace(")", "").split(",").map((item) => parseInt(item));
+  if (new_color.length === 3) {
+    //if no alpha channel, default to fully opaque
+    new_color.push(255);
+  }
   if (new_color.length !== 4) return;
   for (let c=0; c < new_color.length; c++) {
     if (isNaN(new_color[c]) || new_color[c] > 255) return;
@@ -605,9 +608,8 @@ async function get_pixels(width, height) {
 }
 
 class PixelsGrid {
-  constructor(canvas, canvas2, pixels, width, height) {
+  constructor(canvas, pixels, width, height) {
     this.canvas = canvas;
-    this.canvas2 = canvas2;
     this.pixels = pixels;
     this.width = width;
     this.height = height;
@@ -616,44 +618,63 @@ class PixelsGrid {
     this.pixelSize = 20;
     this.border = true;
     this.selected = false;
-    this.canvas2.addEvent("click", [this], false);
+    this.canvas.addEvent("click", [this], false);
     this.canvas.components.push(this);
   }
+  draw_pixel(x, y, clear=false, selected=false) {
+    let true_x = x*this.pixelSize-this.translateFactor[0];
+    let true_y = y*this.pixelSize-this.translateFactor[1];
+    if (clear) {
+      this.canvas.context.clearRect(true_x, true_y, this.pixelSize, this.pixelSize);
+    }
+    let path = new Path2D();
+    path.rect(true_x, true_y, this.pixelSize, this.pixelSize);
+    let color = u32_to_color(this.pixels[y*this.width+x].color);
+    color[3] = Math.round(color[3]*100/255)/100;
+    this.canvas.context.fillStyle = "rgba("+color.join(", ")+")";
+    this.canvas.context.fill(path);
+    if (selected) {
+      this.canvas.context.fillStyle = "rgba(255, 255, 0, 0.8)";
+      this.canvas.context.fill(path);
+    }
+    if (this.border) {
+      this.canvas.context.strokeStyle = "black";
+      this.canvas.context.lineWidth = 0.4;
+      this.canvas.context.stroke(path);
+    }
+  }
   update() {
+    console.log(this.translateFactor)
     //draw pixels at scale
     for (let i=0; i < this.pixels.length; i++) {
       let pixel = this.pixels[i];
       //console.log(pixel)
-      let color = u32_to_color(pixel.color);
-      let path = new Path2D();
       let x = i%this.width;
       let y = Math.floor(i/this.width);
-      path.rect(x*this.pixelSize, y*this.pixelSize, this.pixelSize, this.pixelSize);
-      if (this.border) {
-        this.canvas.context.strokeStyle = "black";
-        this.canvas.context.lineWidth = 2;
-        this.canvas.context.stroke(path);
+      if (this.selected[0] === x && this.selected[1] === y) {
+        this.draw_pixel(x, y, false, true);
+      } else {
+        this.draw_pixel(x, y, false, false);
       }
-      color[3] = Math.round(color[3]*100/255)/100;
-      this.canvas.context.fillStyle = "rgba("+color.join(", ")+")";
-      this.canvas.context.fill(path);
     }
   }
   click(e) {
+    console.log(this.translateFactor)
     //see which box the click is in
-    let x = Math.floor(e.offsetX/this.pixelSize);
-    let y = Math.floor(e.offsetY/this.pixelSize);
+    let x = Math.floor((e.offsetX+this.translateFactor[0])/this.pixelSize);
+    let y = Math.floor((e.offsetY+this.translateFactor[1])/this.pixelSize);
     if (x >= this.width) return;
     if (y >= this.height) return;
+    if (x === this.selected[0] && y === this.selected[1]) return;
+    let old_selected = this.selected;
+    if (old_selected) {
+      this.draw_pixel(old_selected[0], old_selected[1], true, false);
+    }
     this.selected = [x, y];
-    this.canvas2.clear();
-    let path = new Path2D();
-    path.rect(this.selected[0]*this.pixelSize, this.selected[1]*this.pixelSize, this.pixelSize, this.pixelSize);
-    this.canvas2.context.fillStyle = "rgba(255, 255, 0, 0.5)";
-    this.canvas2.context.fill(path);
+    this.draw_pixel(x, y, true, true);
     document.dispatchEvent(new CustomEvent("pixelclick", {
       detail: {
-        pixel: this.pixels[y*this.height+x],
+        pixel: this.pixels[y*this.width+x],
         coords: this.selected
       }
     }));
@@ -664,9 +685,9 @@ class PixelsGrid {
 }
 
 let canvas;
-let canvas2;
+let pixel_grid;
 
-async function draw_pixels() {
+async function draw_pixel_grid() {
   let width = await tiles_contract_read.methods.width().call();
   let height = await tiles_contract_read.methods.height().call();
   let pixels = await get_pixels(width, height);
@@ -674,8 +695,7 @@ async function draw_pixels() {
   document.getElementById("loading-container").style.display = "none";
   document.getElementById("main-grid").style.display = "grid";
   canvas = new Canvas("pixels-canvas");
-  canvas2 = new Canvas("pixels-canvas2", false);
-  new PixelsGrid(canvas, canvas2, pixels, width, height);
+  pixel_grid = new PixelsGrid(canvas, pixels, width, height);
   canvas.update();
   /*setInterval(function() {
     canvas.update();
@@ -683,11 +703,11 @@ async function draw_pixels() {
   //
 }
 
-draw_pixels();
+draw_pixel_grid();
 
-document.addEventListener("pixelclick", (event) => {
-  let pixel = event.detail.pixel;
-  let coords = event.detail.coords;
+document.addEventListener("pixelclick", (e) => {
+  let pixel = e.detail.pixel;
+  let coords = e.detail.coords;
   document.getElementById("none-selected").style.display = "none";
   document.getElementById("pixel-info").style.display = "block";
   document.getElementById("painter").innerText = pixel.painter;
@@ -700,4 +720,51 @@ document.addEventListener("pixelclick", (event) => {
   document.getElementById("buy-btn").onclick = function() {
     buy(coords[0], coords[1]);
   };
+});
+
+let accelerate = 0;
+
+//keydown
+document.addEventListener("keydown", (e) => {
+  if (!pixel_grid) return;
+  if (e.repeat) {
+    accelerate += 1;
+    if (accelerate > 18) {
+      accelerate = 18;
+    }
+  } else {
+    accelerate = 0;
+  }
+  let listen_keys = ["arrowup", "arrowleft", "arrowdown", "arrowright", "w", "a", "s", "d"];
+  let key = e.key.toLowerCase();
+  if (listen_keys.includes(key)) {
+    if (key === "arrowup" || key === "w") {
+      pixel_grid.translateFactor[1] -= 2+accelerate;
+      //
+    } else if (key === "arrowleft" || key === "a") {
+      pixel_grid.translateFactor[0] -= 2+accelerate;
+      //
+    } else if (key === "arrowdown" || key === "s") {
+      pixel_grid.translateFactor[1] += 2+accelerate;
+      //
+    } else if (key === "arrowright" || key === "d") {
+      pixel_grid.translateFactor[0] += 2+accelerate;
+      //
+    }
+    if (pixel_grid.translateFactor[0] < -10) {
+      pixel_grid.translateFactor[0] = -10;
+    }
+    if (pixel_grid.translateFactor[1] < -10) {
+      pixel_grid.translateFactor[1] = -10;
+    }
+    let max_x_trans = pixel_grid.width*pixel_grid.pixelSize+10-canvas.size[0];
+    if (pixel_grid.translateFactor[0] > max_x_trans) {
+      pixel_grid.translateFactor[0] = max_x_trans;
+    }
+    let max_y_trans = pixel_grid.height*pixel_grid.pixelSize+10-canvas.size[1];
+    if (pixel_grid.translateFactor[1] > max_y_trans) {
+      pixel_grid.translateFactor[1] = max_y_trans;
+    }
+    canvas.update();
+  }
 });

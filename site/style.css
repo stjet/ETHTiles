@@ -26,11 +26,6 @@
   width: 100%;
 }
 
-#pixels-canvas2 {
-  top: calc(-90vh - 5px);
-  position: relative;
-}
-
 #main-grid {
   display: grid;
   grid-gap: 1vw;
