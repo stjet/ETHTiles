@@ -9,13 +9,9 @@
     <script src="https://unpkg.com/web3@1.9.0/dist/web3.min.js"></script>
   </head>
   <body>
-    <div>
-      <nav>
-        <button>Main</button>
-        <button>About</button>
-        <button id="admin-btn" class="hide">Admin</button>
-      </nav>
+    <div id="top">
       <button id="connect-btn" onclick="connect()">Connect</button>
+      <a id="connected-address" href="" target="_blank"></a>
     </div>
     <div id="loading-container">
       <h2 id="loading">Loading</h2>
@@ -27,30 +23,58 @@
       <div id="pixels">
         <canvas id="pixels-canvas"></canvas>
       </div>
-      <div id="pixel-container">
-        <div id="actions">
+      <div id="side-panel">
+        <div id="sections">
+          <button id="pixel-info-btn" class="section-change section-change-selected" onclick="change_section('pixel-info')">Pixel Info</button>
+          <button id="admin-btn" class="section-change" onclick="change_section('admin')">Admin</button>
+          <button id="about-btn" class="section-change" onclick="change_section('about')">About</button>
+          <button id="settings-btn" class="section-change" onclick="change_section('settings')">Settings</button>
+        </div>
+        <div id="pixel-info-container" class="section-container">
+          <div id="none-selected">
+            <p>No pixel selected</p>
+          </div>
+          <div id="pixel-info" class="hide">
+            <p>Coords: <span id="coords"></span> <button onclick="coords_link_copy()">Copy Link</button></p>
+            <p>Current Color: <span id="current-color"></span></p>
+            <p>Painter: <span id="painter"></span></p>
+            <p>Bought Price: <span id="bought-price"></span></p>
+            <br>
+            <label for="buy-price">Buy Price (tokens): </label>
+            <input id="buy-price" type="text" placeholder="10">
+            <br>
+            <label for="new-color">New Color: </label>
+            <input id="new-color" type="text" placeholder="(255, 255, 255, 255)">
+            <br>
+            <div id="pixel-btn-container">
+              <button id="approve-btn" onclick="approve()" disabled>Approve Spending (Unconnected)</button>
+              <button id="buy-btn" disabled>Buy Pixel (Unconnected)</button>
+            </div>
+          </div>
+        </div>
+        <div id="admin-container" class="hide section-container">
+          <label for="clear-coords">Coords: </label>
+          <input id="clear-coords" type="text" placeholder="(x, y)">
+          <button id="clear-btn">Clear Pixel</button>
+        </div>
+        <div id="about-container" class="hide section-container">
+          <p>
+            Welcome to the ETHTiles Dapp (decentralized app)!
+            All the tile info is stored and modified by interacting with the ETHTiles smart contract.
+          </p>
+          <p>
+            To change the color of a tile/pixel, first click the "Connect" button and connect your wallet with the site.
+            Then, click the tile on the canvas, and enter in how many tokens you want to pay for it, and the colour you want the pixel to be.
+            Make sure the amount you are paying for it is higher than the current price paid for that title.
+            Click "Approve Spending" to allow the contract to spend a limited amount of your tokens (permission can be easily revoked).
+            Once that confirms, click "Buy Pixel". Once the transaction confirms, the tile will change to the colour you chose!
+          </p>
+        </div>
+        <div id="settings-container" class="hide section-container">
+          <button onclick="update_pixels()">Tile Update</button>
+          <br>
           <label for="toggle-borders">Borders: </label>
           <input id="toggle-borders" type="checkbox" checked></input>
-          <br>
-          <button onclick="update_pixels()">Update</button>
-        </div>
-        <div id="none-selected">
-          <p>No pixel selected</p>
-        </div>
-        <div id="pixel-info" class="hide">
-          <p>Coords: <span id="coords"></span></p>
-          <p>Current Color: <span id="current-color"></span></p>
-          <p>Painter: <span id="painter"></span></p>
-          <p>Bought Price: <span id="bought-price"></span></p>
-          <br>
-          <label for="buy-price">Buy Price (tokens): </label>
-          <input id="buy-price" type="text" placeholder="10">
-          <br>
-          <label for="new-color">New Color: </label>
-          <input id="new-color" type="text" placeholder="(255, 255, 255, 255)">
-          <br>
-          <button id="approve-btn" onclick="approve()" disabled>Approve Spending (Unconnected)</button>
-          <button id="buy-btn" disabled>Buy Pixel (Unconnected)</button>
         </div>
       </div>
     </div>

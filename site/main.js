@@ -505,6 +505,7 @@ const TILES_CONTRACT_ADDRESS = "0x98086B8b4baf43A5Ec5fC00F37306C2e58547A46";
 const OWNER = "0x100e6F9164ADf9C924EDc31bc89Ab8bc1E5db2dd";
 const TOKEN_DECIMALS = 18;
 const TOKEN_NAME = "TESTT";
+const BLOCK_EXPLORER = "https://songbird-explorer.flare.network/";
 
 web3_read.eth.setProvider(RPC_URL);
 let tiles_contract_read = new web3_read.eth.Contract(TILES_ABI, TILES_CONTRACT_ADDRESS);
@@ -519,6 +520,9 @@ let connected = false;
 let web3_user;
 
 function connect_actions(account) {
+  document.getElementById("connected-address").href = BLOCK_EXPLORER+"address/"+account;
+  document.getElementById("connected-address").innerText = account.slice(0, 12)+"..."+account.slice(-10);
+  document.getElementById("connected-address").classList.add("linky-link");
   web3_user = new Web3(window.ethereum);
   tiles_contract = new web3_user.eth.Contract(TILES_ABI, TILES_CONTRACT_ADDRESS, {
     from: account
@@ -583,10 +587,11 @@ async function approve(amount) {
   await token_contract.methods.approve(TILES_CONTRACT_ADDRESS, buy_price).send();
 }
 
-async function buy(x, y) {
+async function buy(x, y, prev_price) {
   if (!connected) return;
   let buy_price = get_buy_price();
   if (!buy_price) return;
+  //parse color
   let new_color = document.getElementById("new-color").value;
   new_color = new_color.replace("(", "").replace(")", "").split(",").map((item) => parseInt(item));
   if (new_color.length === 3) {
@@ -596,6 +601,11 @@ async function buy(x, y) {
   if (new_color.length !== 4) return;
   for (let c=0; c < new_color.length; c++) {
     if (isNaN(new_color[c]) || new_color[c] > 255) return;
+  }
+  //make sure buy price is greater than old buy price, otherwise transaction will fail
+  if (prev_price >= buy_price) {
+    alert("Your buy price is lower than the required price to overwrite the pixel colour!");
+    return;
   }
   await tiles_contract.methods.setPixel(buy_price, x, y, color_to_u32(new_color)).send();
 }
@@ -710,19 +720,53 @@ async function update_pixels() {
 }
 
 async function draw_pixel_grid() {
-  GRID_WIDTH = await tiles_contract_read.methods.width().call();
-  GRID_HEIGHT = await tiles_contract_read.methods.height().call();
+  let query_params = new URLSearchParams(location.search);
+  if (query_params.get("auto_dimensions") === "1") {
+    //some hardcoded value to reduce loading time a bit (save on two requests)
+    GRID_WIDTH = 100;
+    GRID_HEIGHT = 100;
+  } else {
+    GRID_WIDTH = await tiles_contract_read.methods.width().call();
+    GRID_HEIGHT = await tiles_contract_read.methods.height().call();
+  }
   let pixels = await get_pixels();
   document.getElementById("loading-container").style.display = "none";
   document.getElementById("main-grid").style.display = "grid";
   canvas = new Canvas("pixels-canvas");
   pixel_grid = new PixelsGrid(canvas, pixels, GRID_WIDTH, GRID_HEIGHT);
+  //check x_pos and y_pos to move canvas to that area
+  let x_pos = Number(query_params.get("x_pos"));
+  let y_pos = Number(query_params.get("y_pos"));
+  pixel_grid.translateFactor = [x_pos*pixel_grid.pixelSize-Math.floor(canvas.size[0]/2)-pixel_grid.pixelSize/2, y_pos*pixel_grid.pixelSize-Math.floor(canvas.size[1]/2)-pixel_grid.pixelSize/2];
+  if (pixel_grid.translateFactor[0] < 0) {
+    pixel_grid.translateFactor[0] = 0;
+  }
+  if (pixel_grid.translateFactor[1] < 0) {
+    pixel_grid.translateFactor[1] = 0;
+  }
+  //update canvas
   canvas.update();
   //update pixels every minute or so
   setInterval(update_pixels, 60*1000);
 }
 
 draw_pixel_grid();
+
+let sections = ["pixel-info", "admin", "about", "settings"]
+
+function change_section(new_section) {
+  for (let i=0; i < sections.length; i++) {
+    document.getElementById(sections[i]+"-container").classList.add("hide");
+    document.getElementById(sections[i]+"-btn").classList.remove("section-change-selected");
+  }
+  document.getElementById(new_section+"-container").classList.remove("hide");
+  document.getElementById(new_section+"-btn").classList.add("section-change-selected");
+  //
+}
+
+function coords_link_copy() {
+  navigator.clipboard.writeText("https://"+location.host+"/?x_pos="+String(pixel_grid.selected[0])+"&y_pos="+String(pixel_grid.selected[1]));
+}
 
 document.addEventListener("pixelclick", (e) => {
   let pixel = e.detail.pixel;
@@ -737,7 +781,7 @@ document.addEventListener("pixelclick", (e) => {
   //format the color
   document.getElementById("current-color").innerText = "("+u32_to_color(pixel.color).join(", ")+")";
   document.getElementById("buy-btn").onclick = function() {
-    buy(coords[0], coords[1]);
+    buy(coords[0], coords[1], BigInt(pixel.paid_amount));
   };
 });
 
@@ -796,4 +840,33 @@ document.getElementById("toggle-borders").addEventListener("change", function(e)
     pixel_grid.borders = false;
   }
   canvas.update();
+});
+
+let current_touch;
+
+document.addEventListener("touchstart", function(e) {
+  current_touch = {
+    original_touch: [e.touches[0].clientX, e.touches[0].clientY],
+    original_translate: pixel_grid.translateFactor,
+  }
+});
+
+document.addEventListener("touchmove", function(e) {
+  //current_touch.original_touch[0] - e.touches[0].clientX
+  //current_touch.original_touch[1] - e.touches[0].clientY
+});
+
+document.addEventListener("touchend", function(e) {
+  current_touch = undefined;
+});
+
+window.addEventListener("resize", function(_e) {
+  console.log('resize detected')
+  if (canvas) {
+    console.log("changing size")
+    canvas.size = [canvas.canvas.parentElement.offsetWidth, canvas.canvas.parentElement.offsetHeight];
+    canvas.canvas.width = canvas.size[0];
+    canvas.canvas.height = canvas.size[1];
+    canvas.update();
+  }
 });
