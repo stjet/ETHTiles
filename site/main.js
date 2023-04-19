@@ -517,21 +517,22 @@ let GRID_WIDTH;
 let GRID_HEIGHT;
 
 let connected = false;
+let connected_account;
 let web3_user;
 
-function connect_actions(account) {
-  document.getElementById("connected-address").href = BLOCK_EXPLORER+"address/"+account;
-  document.getElementById("connected-address").innerText = account.slice(0, 12)+"..."+account.slice(-10);
+function connect_actions() {
+  document.getElementById("connected-address").href = BLOCK_EXPLORER+"address/"+connected_account;
+  document.getElementById("connected-address").innerText = connected_account.slice(0, 12)+"..."+connected_account.slice(-10);
   document.getElementById("connected-address").classList.add("linky-link");
   web3_user = new Web3(window.ethereum);
   tiles_contract = new web3_user.eth.Contract(TILES_ABI, TILES_CONTRACT_ADDRESS, {
-    from: account
+    from: connected_account
   });
-  if (OWNER.toLowerCase() === account.toLowerCase()) {
+  if (OWNER.toLowerCase() === connected_account.toLowerCase()) {
     document.getElementById("admin-btn").classList.remove("hide");
   }
   token_contract = new web3_user.eth.Contract(ERC20_ABI, TOKEN_CONTRACT_ADDRESS, {
-    from: account
+    from: connected_account
   });
   document.getElementById("connect-btn").innerText = "Connected";
   document.getElementById("connect-btn").disabled = true;
@@ -546,7 +547,8 @@ function connect_actions(account) {
 if (window.ethereum) {
   window.ethereum.request({method: 'eth_accounts'}).then((accounts) => {
     if (accounts.length > 0) {
-      connect_actions(accounts[0]);
+      connected_account = accounts[0];
+      connect_actions();
     }
   });
 }
@@ -555,7 +557,8 @@ async function connect() {
   if (window.ethereum) {
     //error thrown if user rejects request, and connect stopped
     let accounts = await window.ethereum.request({method: 'eth_requestAccounts'});
-    connect_actions(accounts[0]);
+    connected_account = accounts[0];
+    connect_actions();
   }
 }
 
@@ -587,21 +590,57 @@ async function approve(amount) {
   await token_contract.methods.approve(TILES_CONTRACT_ADDRESS, buy_price).send();
 }
 
+function parse_new_color() {
+  let new_color = document.getElementById("new-color").value.trim();
+  if (new_color.startsWith("#") && (new_color.length === 7 || new_color.length === 9)) {
+    //hex
+    new_color = new_color.replace("#", "").toUpperCase();
+    let hexs = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
+    let converted_color = [];
+    let two_hex = "";
+    for (let i=0; i < new_color.length; i++) {
+      console.log(new_color[i], two_hex)
+      //no invalid chars
+      if (!hexs.includes(new_color[i])) return false;
+      two_hex += new_color[i];
+      if (two_hex.length === 2) {
+        //convert to number
+        let num = 0;
+        num += hexs.indexOf(two_hex[0])*16;
+        num += hexs.indexOf(two_hex[1]);
+        console.log("Pushing")
+        converted_color.push(num);
+        two_hex = "";
+      }
+    }
+    if (converted_color.length === 3) {
+      converted_color[3] = 255;
+    }
+    console.log(converted_color)
+    //placeholder
+    return converted_color;
+  } else {
+    //rgba
+    new_color = new_color.replace("(", "").replace(")", "").split(",").map((item) => parseInt(item));
+    if (new_color.length === 3) {
+      //if no alpha channel, default to fully opaque
+      new_color.push(255);
+    }
+    if (new_color.length !== 4) return false;
+    for (let c=0; c < new_color.length; c++) {
+      if (isNaN(new_color[c]) || new_color[c] > 255) return false;
+    }
+  }
+  return new_color;
+}
+
 async function buy(x, y, prev_price) {
   if (!connected) return;
   let buy_price = get_buy_price();
   if (!buy_price) return;
   //parse color
-  let new_color = document.getElementById("new-color").value;
-  new_color = new_color.replace("(", "").replace(")", "").split(",").map((item) => parseInt(item));
-  if (new_color.length === 3) {
-    //if no alpha channel, default to fully opaque
-    new_color.push(255);
-  }
-  if (new_color.length !== 4) return;
-  for (let c=0; c < new_color.length; c++) {
-    if (isNaN(new_color[c]) || new_color[c] > 255) return;
-  }
+  let new_color = parse_new_color();
+  if (!new_color) return;
   //make sure buy price is greater than old buy price, otherwise transaction will fail
   if (prev_price >= buy_price) {
     alert("Your buy price is lower than the required price to overwrite the pixel colour!");
@@ -611,11 +650,14 @@ async function buy(x, y, prev_price) {
 }
 
 async function clear_pixel() {
-  //
+  //parse coords
+  let coords = document.getElementById("clear-coords").value;
+  coords = coords.replace("(", "").replace(")", "").split(",").map((item) => parseInt(item));
+  if (coords.length !== 2) return;
+  await tiles_contract.methods.clearPixel(coords[0], coords[1]).send();
 }
 
 async function get_pixels() {
-  console.log(GRID_WIDTH, GRID_HEIGHT)
   return await new Promise((resolve, reject) => {
     let batch = new web3_read.eth.BatchRequest();
     let pixels = [];
@@ -761,6 +803,12 @@ function change_section(new_section) {
   }
   document.getElementById(new_section+"-container").classList.remove("hide");
   document.getElementById(new_section+"-btn").classList.add("section-change-selected");
+  if (new_section === "settings") {
+    token_contract.methods.allowance(connected_account, TILES_CONTRACT_ADDRESS).call().then((remaining_allowance) => {
+      console.log(remaining_allowance)
+      document.getElementById("remaining-allowance").value = String(remaining_allowance*10**-TOKEN_DECIMALS)+" "+TOKEN_NAME;
+    });
+  }
   //
 }
 
@@ -787,20 +835,39 @@ document.addEventListener("pixelclick", (e) => {
 
 let accelerate = 0;
 
-//keydown
-document.addEventListener("keydown", (e) => {
-  if (!pixel_grid) return;
-  if (e.repeat) {
-    accelerate += 1;
-    if (accelerate > 18) {
-      accelerate = 18;
-    }
-  } else {
-    accelerate = 0;
+function trans_bounds() {
+  if (pixel_grid.translateFactor[0] < -20) {
+    pixel_grid.translateFactor[0] = -20;
   }
-  let listen_keys = ["arrowup", "arrowleft", "arrowdown", "arrowright", "w", "a", "s", "d"];
-  let key = e.key.toLowerCase();
-  if (listen_keys.includes(key)) {
+  if (pixel_grid.translateFactor[1] < -20) {
+    pixel_grid.translateFactor[1] = -20;
+  }
+  let max_x_trans = pixel_grid.width*pixel_grid.pixelSize+20-canvas.size[0];
+  if (pixel_grid.translateFactor[0] > max_x_trans) {
+    pixel_grid.translateFactor[0] = max_x_trans;
+  }
+  let max_y_trans = pixel_grid.height*pixel_grid.pixelSize+20-canvas.size[1];
+  if (pixel_grid.translateFactor[1] > max_y_trans) {
+    pixel_grid.translateFactor[1] = max_y_trans;
+  }
+}
+
+document.getElementById("new-color").addEventListener("change", function(e) {
+  let new_color = parse_new_color();
+  if (new_color) {
+    new_color[3] = new_color[3]/255;
+    console.log("rgba("+new_color.join(",")+")")
+    document.getElementById("color-preview").style.backgroundColor = "rgba("+new_color.join(",")+")";
+  }
+});
+
+//key events
+let allow_arrow_move = false;
+
+let pressed_keys = [];
+
+document.addEventListener("keydown", (e) => {
+  function key_proccess(key) {
     if (key === "arrowup" || key === "w") {
       pixel_grid.translateFactor[1] -= 2+accelerate;
       //
@@ -814,25 +881,53 @@ document.addEventListener("keydown", (e) => {
       pixel_grid.translateFactor[0] += 2+accelerate;
       //
     }
-    if (pixel_grid.translateFactor[0] < -10) {
-      pixel_grid.translateFactor[0] = -10;
+  }
+  if (!pixel_grid) return;
+  if (e.repeat) {
+    accelerate += 1;
+    if (accelerate > 18) {
+      accelerate = 18;
     }
-    if (pixel_grid.translateFactor[1] < -10) {
-      pixel_grid.translateFactor[1] = -10;
+  } else {
+    accelerate = 0;
+  }
+  let listen_keys;
+  if (allow_arrow_move) {
+    listen_keys = ["arrowup", "arrowleft", "arrowdown", "arrowright", "w", "a", "s", "d"];
+  } else {
+    listen_keys = ["w", "a", "s", "d"];
+  }
+  let key = e.key.toLowerCase();
+  if (listen_keys.includes(key)) {
+    if (!pressed_keys.includes(key)) {
+      pressed_keys.push(key);
     }
-    let max_x_trans = pixel_grid.width*pixel_grid.pixelSize+10-canvas.size[0];
-    if (pixel_grid.translateFactor[0] > max_x_trans) {
-      pixel_grid.translateFactor[0] = max_x_trans;
+    console.log(pressed_keys)
+    for (let i=0; i < pressed_keys.length; i++) {
+      key_proccess(pressed_keys[i]);
     }
-    let max_y_trans = pixel_grid.height*pixel_grid.pixelSize+10-canvas.size[1];
-    if (pixel_grid.translateFactor[1] > max_y_trans) {
-      pixel_grid.translateFactor[1] = max_y_trans;
-    }
+    trans_bounds();
     canvas.update();
   }
 });
 
-document.getElementById("toggle-borders").addEventListener("change", function(e) {
+document.addEventListener("keyup", (e) => {
+  pressed_keys = pressed_keys.filter(function(item) {
+    return item !== e.key.toLowerCase();
+  });
+});
+
+document.getElementById("toggle-arrow").addEventListener("change", function(_e) {
+  if (!pixel_grid) return;
+  if (document.getElementById("toggle-arrow").checked) {
+    allow_arrow_move = true;
+  } else {
+    allow_arrow_move = false;
+  }
+  canvas.update();
+});
+
+document.getElementById("toggle-borders").addEventListener("change", function(_e) {
   if (!pixel_grid) return;
   if (document.getElementById("toggle-borders").checked) {
     pixel_grid.borders = true;
@@ -852,8 +947,14 @@ document.addEventListener("touchstart", function(e) {
 });
 
 document.addEventListener("touchmove", function(e) {
-  //current_touch.original_touch[0] - e.touches[0].clientX
-  //current_touch.original_touch[1] - e.touches[0].clientY
+  if (current_touch) {
+    pixel_grid.translateFactor = [
+      current_touch.original_translate[0]+(current_touch.original_touch[0]-e.touches[0].clientX),
+      current_touch.original_translate[1]+(current_touch.original_touch[1]-e.touches[0].clientY)
+    ];
+    trans_bounds();
+    canvas.update();
+  }
 });
 
 document.addEventListener("touchend", function(e) {
@@ -861,9 +962,7 @@ document.addEventListener("touchend", function(e) {
 });
 
 window.addEventListener("resize", function(_e) {
-  console.log('resize detected')
   if (canvas) {
-    console.log("changing size")
     canvas.size = [canvas.canvas.parentElement.offsetWidth, canvas.canvas.parentElement.offsetHeight];
     canvas.canvas.width = canvas.size[0];
     canvas.canvas.height = canvas.size[1];
