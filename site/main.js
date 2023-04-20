@@ -587,7 +587,12 @@ async function approve(amount) {
   if (!connected) return;
   let buy_price = get_buy_price();
   if (!buy_price) return;
-  await token_contract.methods.approve(TILES_CONTRACT_ADDRESS, buy_price).send();
+  try {
+    await token_contract.methods.approve(TILES_CONTRACT_ADDRESS, buy_price).send();
+  } catch (e) {
+    //User probably rejected it, or "not mined" message. But we don't care.
+    console.error(e);
+  }
 }
 
 function parse_new_color() {
@@ -646,7 +651,12 @@ async function buy(x, y, prev_price) {
     alert("Your buy price is lower than the required price to overwrite the pixel colour!");
     return;
   }
-  await tiles_contract.methods.setPixel(buy_price, x, y, color_to_u32(new_color)).send();
+  try {
+    await tiles_contract.methods.setPixel(buy_price, x, y, color_to_u32(new_color)).send();
+  } catch (e) {
+    //User probably rejected it, or "not mined" message. But we don't care.
+    console.error(e);
+  }
 }
 
 async function clear_pixel() {
@@ -664,7 +674,7 @@ async function get_pixels() {
     for (let y=0; y < GRID_HEIGHT; y++) {
       for (let x=0; x < GRID_WIDTH; x++) {
         batch.add(tiles_contract_read.methods.pixels(y, x).call.request((error, pixel) => {
-          if (error) console.log(error);
+          if (error) console.error(error);
           pixels.push(pixel);
           if (pixels.length === GRID_HEIGHT*GRID_WIDTH) {
             resolve(pixels);
