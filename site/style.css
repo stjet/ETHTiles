@@ -114,6 +114,30 @@ button:disabled {
 
 #top {
   margin-bottom: 4px;
+  display: grid;
+  grid-template-columns: 40% 60%;
+}
+
+#top-logo {
+  height: 42px;
+  width: 42px;
+  margin-top: -6px;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+#top-logo-container {
+  display: inline-block;
+}
+
+#top-logo-container h2 {
+  margin: 0;
+  display: inline-block;
+}
+
+#connect-container {
+  display: inline-block;
+  padding-top: 4px;
 }
 
 #pixel-btn-container {
@@ -122,6 +146,7 @@ button:disabled {
 
 #connect-btn {
   padding: 2px 7px;
+  margin-right: 4px;
 }
 
 .copy-link {
@@ -146,11 +171,28 @@ button:disabled {
   vertical-align: middle;
 }
 
+#paused-notice {
+  color: red;
+}
+
 @media screen and (max-width: 1000px) {
+  #top {
+    grid-template-columns: auto auto;
+  }
+  #top-logo {
+    height: 36px;
+    width: 36px;
+    margin-top: 0;
+  }
+  #top-logo-container h2 {
+    display: none;
+  }
   #main-grid {
     grid-template-columns: auto;
   }
   .section-container {
+    padding-bottom: 12px;
     margin-bottom: 10px;
+    height: auto;
   }
 }

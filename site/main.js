@@ -506,6 +506,17 @@ const OWNER = "0x100e6F9164ADf9C924EDc31bc89Ab8bc1E5db2dd";
 const TOKEN_DECIMALS = 18;
 const TOKEN_NAME = "TESTT";
 const BLOCK_EXPLORER = "https://songbird-explorer.flare.network/";
+const CHAIN_INFO = {
+  chainId: "0x13",
+  rpcUrls: ["https://songbird-api.flare.network/ext/C/rpc"],
+  chainName: "Songbird",
+  nativeCurrency: {
+    name: "Songbird",
+    symbol: "SGB",
+    decimals: 18
+  },
+  blockExplorerUrls: ["https://songbird-explorer.flare.network/"]
+};
 
 web3_read.eth.setProvider(RPC_URL);
 let tiles_contract_read = new web3_read.eth.Contract(TILES_ABI, TILES_CONTRACT_ADDRESS);
@@ -520,9 +531,32 @@ let connected = false;
 let connected_account;
 let web3_user;
 
+async function refresh_paused() {
+  let paused = await tiles_contract_read.methods.paused().call();
+  if (paused) {
+    document.getElementById("pause").disabled = true;
+    document.getElementById("unpause").disabled = false;
+    document.getElementById("buy-btn").disabled = true;
+    document.getElementById("paused-notice").classList.remove("hide");
+  } else {
+    document.getElementById("pause").disabled = false;
+    document.getElementById("unpause").disabled = true;
+    if (connected) {
+      document.getElementById("buy-btn").disabled = false;
+    }
+    document.getElementById("paused-notice").classList.add("hide");
+  }
+}
+
 function connect_actions() {
+  //ask them to ask/switch network pretty please
+  window.ethereum.request({
+    method: "wallet_addEthereumChain",
+    params: [CHAIN_INFO]
+  });
+  //setup
   document.getElementById("connected-address").href = BLOCK_EXPLORER+"address/"+connected_account;
-  document.getElementById("connected-address").innerText = connected_account.slice(0, 12)+"..."+connected_account.slice(-10);
+  document.getElementById("connected-address").innerText = connected_account.slice(0, 10)+"..."+connected_account.slice(-8);
   document.getElementById("connected-address").classList.add("linky-link");
   web3_user = new Web3(window.ethereum);
   tiles_contract = new web3_user.eth.Contract(TILES_ABI, TILES_CONTRACT_ADDRESS, {
@@ -604,7 +638,6 @@ function parse_new_color() {
     let converted_color = [];
     let two_hex = "";
     for (let i=0; i < new_color.length; i++) {
-      console.log(new_color[i], two_hex)
       //no invalid chars
       if (!hexs.includes(new_color[i])) return false;
       two_hex += new_color[i];
@@ -613,7 +646,6 @@ function parse_new_color() {
         let num = 0;
         num += hexs.indexOf(two_hex[0])*16;
         num += hexs.indexOf(two_hex[1]);
-        console.log("Pushing")
         converted_color.push(num);
         two_hex = "";
       }
@@ -621,7 +653,6 @@ function parse_new_color() {
     if (converted_color.length === 3) {
       converted_color[3] = 255;
     }
-    console.log(converted_color)
     //placeholder
     return converted_color;
   } else {
@@ -657,6 +688,15 @@ async function buy(x, y, prev_price) {
     //User probably rejected it, or "not mined" message. But we don't care.
     console.error(e);
   }
+}
+
+//pause can be to stop attack to clear canvas, preserve the canvas or just... pause
+async function pause() {
+  await tiles_contract.methods.pause().send();
+}
+
+async function unpause() {
+  await tiles_contract.methods.unpause().send();
 }
 
 async function clear_pixel() {
@@ -767,8 +807,8 @@ let pixel_grid;
 async function update_pixels() {
   console.log("Updating pixels (calling tiles smart contract)");
   pixel_grid.pixels = await get_pixels();
-  console.log(pixel_grid.pixels[0], pixel_grid.pixels.length);
   canvas.update();
+  refresh_paused();
 }
 
 async function draw_pixel_grid() {
@@ -798,6 +838,8 @@ async function draw_pixel_grid() {
   }
   //update canvas
   canvas.update();
+  //check paused
+  refresh_paused();
   //update pixels every minute or so
   setInterval(update_pixels, 60*1000);
 }
@@ -945,6 +987,23 @@ document.getElementById("toggle-borders").addEventListener("change", function(_e
     pixel_grid.borders = false;
   }
   canvas.update();
+});
+
+document.getElementById("top-logo").addEventListener("click", function (_e) {
+  //set plonk animation
+  document.getElementById("top-logo").animate([
+    {
+      "transform": "translate(0, 0)"
+    },
+    {
+      "transform": "translate(-1px, -1px)"
+    },
+    {
+      "transform": "translate(0, 0)"
+    }
+  ], {
+    duration: 140
+  });
 });
 
 let current_touch;

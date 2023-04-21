@@ -5,13 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ETHTiles</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="ethtiles.png">
     <script src="blackbeard.js"></script>
     <script src="https://unpkg.com/web3@1.9.0/dist/web3.min.js"></script>
   </head>
   <body>
     <div id="top">
-      <button id="connect-btn" onclick="connect()">Connect</button>
-      <a id="connected-address" href="" target="_blank"></a>
+      <div id="top-logo-container">
+        <img id="top-logo" src="ethtiles.png"></img>
+        <h2>ETHTiles</h2>
+      </div>
+      <div id="connect-container">
+        <button id="connect-btn" onclick="connect()">Connect</button>
+        <a id="connected-address" href="" target="_blank"></a>
+      </div>
     </div>
     <div id="loading-container">
       <h2 id="loading">Loading</h2>
@@ -46,6 +53,10 @@
             <label for="new-color">New Color: </label>
             <input id="new-color" type="text" placeholder="(255, 255, 255, 255) or #FFFFFFFF">
             <div id="color-preview"></div>
+            <div id="paused-notice" class="hide">
+              <br>
+              <span>The contract is currently paused!</span>
+            </div>
             <br>
             <div id="pixel-btn-container">
               <button id="approve-btn" onclick="approve()" disabled>Approve Spending (Unconnected)</button>
@@ -57,6 +68,11 @@
           <label for="clear-coords">Coords: </label>
           <input id="clear-coords" type="text" placeholder="(x, y)">
           <button id="clear-btn" onclick="clear_pixel()">Clear Pixel</button>
+          <br>
+          <button onclick="refresh_paused()">Update Paused Status</button>
+          <br>
+          <button id="pause" onclick="pause()" disabled>Pause</button>
+          <button id="unpause" onclick="unpause()" disabled>Unpause</button>
         </div>
         <div id="about-container" class="hide section-container">
           <p>
@@ -69,6 +85,10 @@
             Make sure the amount you are paying for it is higher than the current price paid for that title.
             Click "Approve Spending" to allow the contract to spend a limited amount of your tokens (permission can be easily revoked).
             Once that confirms, click "Buy Pixel". Once the transaction confirms, the tile will change to the colour you chose!
+          </p>
+          <p>
+            Use the WASD keys to move (go into settings to enable moving with arrow keys). On mobile, drag on the canvas to move.
+            Moving on with WASD or arrow keys can be a bit janky, sorry about that.
           </p>
         </div>
         <div id="settings-container" class="hide section-container">

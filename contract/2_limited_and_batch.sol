@@ -93,11 +93,13 @@ contract Tiles {
   }
 
   function pause() external ownerOnly returns (bool) {
+    require(!paused, "Painting is already paused");
     paused = true;
     return paused;
   }
 
   function unpause() external ownerOnly returns (bool) {
+    require(paused, "Painting is already unpaused");
     paused = false;
     return paused;
   }
