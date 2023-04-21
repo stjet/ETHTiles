@@ -548,11 +548,18 @@ async function refresh_paused() {
   }
 }
 
-function connect_actions() {
-  //ask them to ask/switch network pretty please
+function add_network() {
   window.ethereum.request({
     method: "wallet_addEthereumChain",
     params: [CHAIN_INFO]
+  });
+}
+
+function connect_actions() {
+  //ask them to switch network pretty please
+  window.ethereum.request({
+    method: 'wallet_switchEthereumChain',
+    params: [{ chainId: CHAIN_INFO.chainId }], // chainId must be in hexadecimal numbers
   });
   //setup
   document.getElementById("connected-address").href = BLOCK_EXPLORER+"address/"+connected_account;
@@ -574,6 +581,7 @@ function connect_actions() {
   document.getElementById("buy-btn").innerText = "Buy Pixel";
   document.getElementById("approve-btn").disabled = false;
   document.getElementById("approve-btn").innerText = "Approve Spending";
+  document.getElementById("add-network").disabled = false;
   connected = true;
 }
 
