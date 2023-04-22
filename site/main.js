@@ -630,7 +630,11 @@ async function approve(amount) {
   let buy_price = get_buy_price();
   if (!buy_price) return;
   try {
-    await token_contract.methods.approve(TILES_CONTRACT_ADDRESS, buy_price).send();
+    await token_contract.methods.approve(TILES_CONTRACT_ADDRESS, buy_price).send({
+      gasPrice: null,
+      maxPriorityFeePerGas: null,
+      maxFeePerGas: null
+    });
   } catch (e) {
     //User probably rejected it, or "not mined" message. But we don't care.
     console.error(e);
@@ -691,7 +695,11 @@ async function buy(x, y, prev_price) {
     return;
   }
   try {
-    await tiles_contract.methods.setPixel(buy_price, x, y, color_to_u32(new_color)).send();
+    await tiles_contract.methods.setPixel(buy_price, x, y, color_to_u32(new_color)).send({
+      gasPrice: null,
+      maxPriorityFeePerGas: null,
+      maxFeePerGas: null
+    });
   } catch (e) {
     //User probably rejected it, or "not mined" message. But we don't care.
     console.error(e);
@@ -826,8 +834,8 @@ async function draw_pixel_grid() {
     GRID_WIDTH = 100;
     GRID_HEIGHT = 100;
   } else {
-    GRID_WIDTH = await tiles_contract_read.methods.width().call();
-    GRID_HEIGHT = await tiles_contract_read.methods.height().call();
+    GRID_WIDTH = Number(await tiles_contract_read.methods.width().call());
+    GRID_HEIGHT = Number(await tiles_contract_read.methods.height().call());
   }
   let pixels = await get_pixels();
   document.getElementById("loading-container").style.display = "none";

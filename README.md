@@ -9,3 +9,5 @@ The smart contracts (in the `contracts` directory) are all licensed under the MI
 If you do not want to be restricted by the license, do not have the technical knowledge to set this up, or need special modifications, I am available for hire.
 
 ![ETHTiles Demo/Example Photo](/images/demo.png)
+
+Please note that some public RPCs limit how large a batch request can be. You can still make the canvas as large as you want, but depending on the RPC, you may need to write some code to split the batch requests into several batches, which isn't too hard.
