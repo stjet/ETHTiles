@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ETHTiles</title>
+    <title>Potassapaint</title>
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="ethtiles.png">
     <script src="blackbeard.js"></script>
@@ -13,7 +13,7 @@
     <div id="top">
       <div id="top-logo-container">
         <img id="top-logo" src="ethtiles.png"></img>
-        <h2>ETHTiles</h2>
+        <h2>Potassapaint</h2>
       </div>
       <div id="connect-container">
         <button id="connect-btn" onclick="connect()">Connect</button>
@@ -76,8 +76,9 @@
         </div>
         <div id="about-container" class="hide section-container">
           <p>
-            Welcome to the ETHTiles Dapp (decentralized app)!
-            All the tile info is stored and modified by interacting with the ETHTiles smart contract.
+            Welcome to the Potassapaint Dapp (decentralized app)!
+            This is a fork of ETHTiles made by <a href="https://prussia.dev" target="_blank" class="linky-link">Prussia</a>.
+            All the tile info is stored and modified by interacting with the Potassapaint smart contract.
           </p>
           <p>
             To change the color of a tile/pixel, first click the "Connect" button and connect your wallet with the site.
@@ -87,12 +88,17 @@
             Once that confirms, click "Buy Pixel". Once the transaction confirms, the tile will change to the colour you chose!
           </p>
           <p>
+            Since Polygon is weird, be careful with gas fees! If you pay too much for a tile, it is recoverable, but if you pay too much in gas fees, it won't be.
+          </p>
+          <p>
             Use the WASD keys to move (go into settings to enable moving with arrow keys). On mobile, drag on the canvas to move.
             Moving on with WASD or arrow keys can be a bit janky, sorry about that.
           </p>
         </div>
         <div id="settings-container" class="hide section-container">
           <button onclick="update_pixels()">Tile Update</button>
+          <br>
+          <button id="add-network" onclick="add_network()" disabled>Add Network</button>
           <br>
           <label for="toggle-borders">Borders: </label>
           <input id="toggle-borders" type="checkbox" checked></input>

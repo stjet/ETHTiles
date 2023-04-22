@@ -497,25 +497,24 @@ const ERC20_ABI = [
 
 const web3_read = new Web3();
 
-//https://songbird-api.flare.network/ext/C/rpc
-//https://sgb.ftso.com.au/ext/bc/C/rpc
-const RPC_URL = "https://sgb.ftso.com.au/ext/bc/C/rpc";
-const TOKEN_CONTRACT_ADDRESS = "0x376cf089c29d3c1d353028E181Ae3162ec3a5c1A";
-const TILES_CONTRACT_ADDRESS = "0x98086B8b4baf43A5Ec5fC00F37306C2e58547A46";
+//https://polygon.llamarpc.com seems like it'll work with around 7225 (85x85) requests but not 87x87
+const RPC_URL = "https://polygon.llamarpc.com";
+const TOKEN_CONTRACT_ADDRESS = "0xe20b9e246db5a0d21bf9209e4858bc9a3ff7a034";
+const TILES_CONTRACT_ADDRESS = "0xE259819dD4c67125719Aef04F2E97A7a550B0049";
 const OWNER = "0x100e6F9164ADf9C924EDc31bc89Ab8bc1E5db2dd";
 const TOKEN_DECIMALS = 18;
 const TOKEN_NAME = "TESTT";
-const BLOCK_EXPLORER = "https://songbird-explorer.flare.network/";
+const BLOCK_EXPLORER = "https://polygonscan.com/";
 const CHAIN_INFO = {
-  chainId: "0x13",
-  rpcUrls: ["https://songbird-api.flare.network/ext/C/rpc"],
-  chainName: "Songbird",
+  chainId: "0x89",
+  rpcUrls: ["https://polygon-rpc.com"],
+  chainName: "Polygon Mainnet",
   nativeCurrency: {
-    name: "Songbird",
-    symbol: "SGB",
+    name: "Matic",
+    symbol: "MATIC",
     decimals: 18
   },
-  blockExplorerUrls: ["https://songbird-explorer.flare.network/"]
+  blockExplorerUrls: ["https://polygonscan.com/"]
 };
 
 web3_read.eth.setProvider(RPC_URL);
@@ -548,11 +547,18 @@ async function refresh_paused() {
   }
 }
 
-function connect_actions() {
-  //ask them to ask/switch network pretty please
+function add_network() {
   window.ethereum.request({
     method: "wallet_addEthereumChain",
     params: [CHAIN_INFO]
+  });
+}
+
+function connect_actions() {
+  //ask them to switch network pretty please
+  window.ethereum.request({
+    method: 'wallet_switchEthereumChain',
+    params: [{ chainId: CHAIN_INFO.chainId }], // chainId must be in hexadecimal numbers
   });
   //setup
   document.getElementById("connected-address").href = BLOCK_EXPLORER+"address/"+connected_account;
@@ -574,6 +580,7 @@ function connect_actions() {
   document.getElementById("buy-btn").innerText = "Buy Pixel";
   document.getElementById("approve-btn").disabled = false;
   document.getElementById("approve-btn").innerText = "Approve Spending";
+  document.getElementById("add-network").disabled = false;
   connected = true;
 }
 
@@ -620,9 +627,16 @@ function get_buy_price() {
 async function approve(amount) {
   if (!connected) return;
   let buy_price = get_buy_price();
-  if (!buy_price) return;
+  if (!buy_price) {
+    alert("Please put in a buy price first.");
+    return;
+  }
   try {
-    await token_contract.methods.approve(TILES_CONTRACT_ADDRESS, buy_price).send();
+    await token_contract.methods.approve(TILES_CONTRACT_ADDRESS, buy_price).send({
+      gasPrice: null,
+      maxPriorityFeePerGas: null,
+      maxFeePerGas: null
+    });
   } catch (e) {
     //User probably rejected it, or "not mined" message. But we don't care.
     console.error(e);
@@ -683,7 +697,11 @@ async function buy(x, y, prev_price) {
     return;
   }
   try {
-    await tiles_contract.methods.setPixel(buy_price, x, y, color_to_u32(new_color)).send();
+    await tiles_contract.methods.setPixel(buy_price, x, y, color_to_u32(new_color)).send({
+      gasPrice: null,
+      maxPriorityFeePerGas: null,
+      maxFeePerGas: null
+    });
   } catch (e) {
     //User probably rejected it, or "not mined" message. But we don't care.
     console.error(e);
@@ -815,11 +833,11 @@ async function draw_pixel_grid() {
   let query_params = new URLSearchParams(location.search);
   if (query_params.get("auto_dimensions") === "1") {
     //some hardcoded value to reduce loading time a bit (save on two requests)
-    GRID_WIDTH = 100;
-    GRID_HEIGHT = 100;
+    GRID_WIDTH = 69;
+    GRID_HEIGHT = 69;
   } else {
-    GRID_WIDTH = await tiles_contract_read.methods.width().call();
-    GRID_HEIGHT = await tiles_contract_read.methods.height().call();
+    GRID_WIDTH = Number(await tiles_contract_read.methods.width().call());
+    GRID_HEIGHT = Number(await tiles_contract_read.methods.height().call());
   }
   let pixels = await get_pixels();
   document.getElementById("loading-container").style.display = "none";
