@@ -756,16 +756,32 @@ class PixelsGrid {
     this.borders = true;
     this.selected = false;
     this.canvas.addEvent("click", [this], false);
+    this.canvas.addEvent("wheel", [this], false);
     this.canvas.components.push(this);
   }
   draw_pixel(x, y, clear=false, selected=false) {
+    //yes ik its the same as this.pixelSize/this.scaleFactor.
+    //but i like writing it this way better - prussia
+    let pixelSize = this.pixelSize*(1/this.scaleFactor);
     let true_x = x*this.pixelSize-this.translateFactor[0];
+    true_x *= 1/this.scaleFactor;
     let true_y = y*this.pixelSize-this.translateFactor[1];
+    true_y *= 1/this.scaleFactor;
+    //don't draw if off the screen
+    if (true_x < -pixelSize-5) {
+      return;
+    } else if (true_y < -pixelSize-5) {
+      return;
+    } else if (true_x > this.canvas.size[0]+5) {
+      return;
+    } else if (true_y > this.canvas.size[1]+5) {
+      return;
+    }
     if (clear) {
-      this.canvas.context.clearRect(true_x, true_y, this.pixelSize, this.pixelSize);
+      this.canvas.context.clearRect(true_x, true_y, pixelSize, pixelSize);
     }
     let path = new Path2D();
-    path.rect(true_x, true_y, this.pixelSize, this.pixelSize);
+    path.rect(true_x, true_y, pixelSize, pixelSize);
     let color = u32_to_color(this.pixels[y*this.width+x].color);
     color[3] = Math.round(color[3]*100/255)/100;
     this.canvas.context.fillStyle = "rgba("+color.join(", ")+")";
@@ -796,8 +812,9 @@ class PixelsGrid {
   }
   click(e) {
     //see which box the click is in
-    let x = Math.floor((e.offsetX+this.translateFactor[0])/this.pixelSize);
-    let y = Math.floor((e.offsetY+this.translateFactor[1])/this.pixelSize);
+    let pixelSize = this.pixelSize*(1/this.scaleFactor);
+    let x = Math.floor((e.offsetX+this.translateFactor[0]/this.scaleFactor)/pixelSize);
+    let y = Math.floor((e.offsetY+this.translateFactor[1]/this.scaleFactor)/pixelSize);
     if (x >= this.width) return;
     if (y >= this.height) return;
     if (x === this.selected[0] && y === this.selected[1]) return;
@@ -813,6 +830,33 @@ class PixelsGrid {
         coords: this.selected
       }
     }));
+  }
+  wheel(e) {
+    const scroll_change = 0.025;
+    if (e.deltaY > 0) {
+      this.scaleFactor += scroll_change;
+    } else {
+      this.scaleFactor -= scroll_change;
+    }
+    if (this.scaleFactor < 0.25) {
+      this.scaleFactor = 0.25;
+    } else if (this.scaleFactor > 2.5) {
+      this.scaleFactor = 2.5;
+    } else if (e.deltaY < 0) {
+      this.translateFactor[0] += e.offsetX*(this.scaleFactor+scroll_change)-e.offsetX*(this.scaleFactor);
+      this.translateFactor[1] += e.offsetY*(this.scaleFactor+scroll_change)-e.offsetY*(this.scaleFactor);
+    } else if (e.deltaY > 0) {
+      this.translateFactor[0] -= e.offsetX*(this.scaleFactor)-e.offsetX*(this.scaleFactor-scroll_change);
+      this.translateFactor[1] -= e.offsetY*(this.scaleFactor)-e.offsetY*(this.scaleFactor-scroll_change);
+    }
+    if (this.translateFactor[0] < 0) {
+      this.translateFactor[0] = 0;
+    }
+    if (this.translateFactor[1] < 0) {
+      this.translateFactor[1] = 0;
+    }
+    this.canvas.clear();
+    this.update();
   }
   mousemove(e) {
     //e.offsetX, e.offsetY
@@ -912,11 +956,12 @@ function trans_bounds() {
   if (pixel_grid.translateFactor[1] < -20) {
     pixel_grid.translateFactor[1] = -20;
   }
-  let max_x_trans = pixel_grid.width*pixel_grid.pixelSize+20-canvas.size[0];
+  let pixelSize = pixel_grid.pixelSize*(1/pixel_grid.scaleFactor);
+  let max_x_trans = pixel_grid.width*pixelSize-10;
   if (pixel_grid.translateFactor[0] > max_x_trans) {
     pixel_grid.translateFactor[0] = max_x_trans;
   }
-  let max_y_trans = pixel_grid.height*pixel_grid.pixelSize+20-canvas.size[1];
+  let max_y_trans = pixel_grid.height*pixelSize-10;
   if (pixel_grid.translateFactor[1] > max_y_trans) {
     pixel_grid.translateFactor[1] = max_y_trans;
   }
